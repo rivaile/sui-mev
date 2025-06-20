@@ -190,10 +190,11 @@ impl DBSimulator {
                 InputObjectKind::SharedMoveObject { id, .. } => match self.store.get_object(id) {
                     Some(object) => input_results[i] = Some(ObjectReadResult::new(*kind, object.into())),
                     None => {
-                        if let Some((version, digest)) = self.store.get_last_shared_object_deletion_info(id, epoch_id) {
+                        let input_full_id = kind.full_object_id();
+                        if let Some((version, digest)) = self.store.get_last_consensus_stream_end_info(input_full_id, epoch_id) {
                             input_results[i] = Some(ObjectReadResult {
                                 input_object_kind: *kind,
-                                object: ObjectReadResultKind::DeletedSharedObject(version, digest),
+                                object: ObjectReadResultKind::ObjectConsensusStreamEnded(version, digest),
                             });
                         } else {
                             return Err(SuiError::from(kind.object_not_found_error()));
@@ -266,6 +267,7 @@ impl Simulator for DBSimulator {
 
         let sender = tx.sender();
         let original_gas = tx.gas().to_vec();
+        let (kind, signer, gas_data) = tx.execution_parts();
 
         let mock_gas_id =
             ObjectID::from_str("0x0000000000000000000000000000000000000000000000000000000000001337").unwrap();
@@ -287,6 +289,10 @@ impl Simulator for DBSimulator {
         } else {
             (original_gas, None)
         };
+
+        let mut gas_data = gas_data;
+        gas_data.payment = gas_ref;
+
 
         let gas_status = match SuiGasStatus::new(tx.gas_budget(), tx.gas_price(), tx.gas_price(), &self.protocol_config)
             .map_err(|e| eyre::eyre!(e))
@@ -343,7 +349,7 @@ impl Simulator for DBSimulator {
         let simulate_start = std::time::Instant::now();
 
         let (inner_temporary_store, effects) = catch_unwind(AssertUnwindSafe(|| {
-            let (inner_temporary_store, _, effects, _) = self.executor.execute_transaction_to_effects(
+            let (inner_temporary_store, _, effects, _,_) = self.executor.execute_transaction_to_effects(
                 &override_cache,
                 &self.protocol_config,
                 self.metrics.clone(),
@@ -352,11 +358,12 @@ impl Simulator for DBSimulator {
                 &epoch.epoch_id,
                 epoch.epoch_start_timestamp,
                 CheckedInputObjects::new_with_checked_transaction_inputs(input_objects),
-                gas_ref,
+                gas_data,
                 gas_status,
                 kind,
                 sender,
                 digest,
+                &mut None,
             );
             (inner_temporary_store, effects)
         }))
@@ -373,20 +380,23 @@ impl Simulator for DBSimulator {
 
         // don't let sui calc balance change. we will do it manually
         let mut balance_changes = if !use_mock_gas {
+
+            let borrowed_coin_ids = borrowed_coin.clone().map(|(obj, _)| obj.id());
+
             // ignore borrowed coin
             get_balance_changes_from_effect(
                 &executed_db,
                 &effects,
                 input_object_kinds,
-                borrowed_coin.clone().map(|(obj, _)| vec![obj.id()]),
+                borrowed_coin_ids,
             )
             .await?
         } else {
-            let mut ignore_ids = vec![mock_gas_id];
-            if let Some((borrowed_coin_obj, _)) = &borrowed_coin {
-                ignore_ids.push(borrowed_coin_obj.id());
-            }
-            get_balance_changes_from_effect(&executed_db, &effects, input_object_kinds, Some(ignore_ids)).await?
+            // let mut ignore_ids = vec![mock_gas_id];
+            // if let Some((borrowed_coin_obj, _)) = &borrowed_coin {
+            //     ignore_ids.push(borrowed_coin_obj.id());
+            // }
+            get_balance_changes_from_effect(&executed_db, &effects, input_object_kinds, Some(mock_gas_id)).await?
         };
 
         // Subtract how much we borrowed

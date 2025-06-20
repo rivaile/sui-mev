@@ -53,7 +53,7 @@ struct CollectorConfig {
     pub shio_ws_url: Option<String>,
 
     /// public tx collector
-    #[arg(long, env = "SUI_TX_SOCKET_PATH", default_value = "/tmp/sui_tx.sock")]
+    #[arg(long, env = "SUI_TX_SOCKET_PATH", default_value = "/tmp/tmp/sui_tx.sock")]
     pub tx_socket_path: String,
 }
 

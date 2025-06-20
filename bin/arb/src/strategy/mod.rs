@@ -244,7 +244,7 @@ fn new_object_read_result(tx_digest: TransactionDigest, shio_obj: &ShioObject) -
         let version = OBJECT_START_VERSION;
         let contents = Base64::decode(&shio_obj.object_bcs)?;
         let protocol_config = ProtocolConfig::get_for_version(ProtocolVersion::MAX, Chain::Mainnet);
-        unsafe { MoveObject::new_from_execution(type_, has_public_transfer, version, contents, &protocol_config)? }
+        unsafe { MoveObject::new_from_execution(type_, has_public_transfer, version, contents, &protocol_config, true)? }
     };
 
     let owner = serde_json::from_value::<Owner>(shio_obj.owner.clone())?;

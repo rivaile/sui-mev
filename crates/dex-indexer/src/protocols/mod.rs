@@ -152,7 +152,7 @@ macro_rules! move_struct_layout {
     ($type_:expr, $fields:expr) => {
         MoveStructLayout {
             type_: $type_,
-            fields: Box::new($fields),
+            fields: $fields,
         }
     };
 }

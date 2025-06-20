@@ -55,28 +55,28 @@ impl ReplaySimulator {
         short_interval: Duration,
         long_interval: Duration,
     ) {
-        let mut quick_update_times = 0;
-        let mut current_interval = long_interval;
-        loop {
-            // Sleep for the current interval
-            tokio::time::sleep(current_interval).await;
+        // let mut quick_update_times = 0;
+        // let mut current_interval = long_interval;
+        // loop {
+        //     // Sleep for the current interval
+        //     tokio::time::sleep(current_interval).await;
 
-            // Check if we received any update notifications
-            while receiver.try_recv().is_ok() {
-                quick_update_times = 50;
-            }
+        //     // Check if we received any update notifications
+        //     while receiver.try_recv().is_ok() {
+        //         quick_update_times = 50;
+        //     }
 
-            // Update the cache
-            cache_writeback.update_underlying(true);
+        //     // Update the cache
+        //     cache_writeback.update_underlying(true);
 
-            // Update interval based on quick_update_times
-            if quick_update_times > 0 {
-                current_interval = short_interval;
-                quick_update_times -= 1;
-            } else {
-                current_interval = long_interval;
-            }
-        }
+        //     // Update interval based on quick_update_times
+        //     if quick_update_times > 0 {
+        //         current_interval = short_interval;
+        //         quick_update_times -= 1;
+        //     } else {
+        //         current_interval = long_interval;
+        //     }
+        // }
     }
 }
 
@@ -84,13 +84,13 @@ impl ReplaySimulator {
 impl Simulator for ReplaySimulator {
     async fn simulate(&self, tx: TransactionData, ctx: SimulateCtx) -> eyre::Result<SimulateResult> {
         // always make sure gas coins are up to date
-        let gas_ids = tx.gas().iter().map(|obj| obj.0).collect::<Vec<_>>();
-        let latest = self.fallback.store.store.multi_get_objects(&gas_ids);
-        let gas_coins = latest
-            .into_iter()
-            .filter_map(|obj| obj.map(|o| (o.id(), o)))
-            .collect::<Vec<_>>();
-        self.fallback.store.reload_cached(gas_coins);
+        // let gas_ids = tx.gas().iter().map(|obj| obj.0).collect::<Vec<_>>();
+        // let latest = self.fallback.store.store.multi_get_objects(&gas_ids);
+        // let gas_coins = latest
+        //     .into_iter()
+        //     .filter_map(|obj| obj.map(|o| (o.id(), o)))
+        //     .collect::<Vec<_>>();
+        // self.fallback.store.reload_cached(gas_coins);
 
         self.fallback.simulate(tx, ctx).await
     }
