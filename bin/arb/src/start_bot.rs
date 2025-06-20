@@ -239,10 +239,10 @@ pub async fn run(args: Args) -> Result<()> {
     .await;
     engine.add_strategy(Box::new(arb_strategy));
 
-    engine.add_executor(map_executor!(
-        TelegramMessageDispatcher::new_without_error_report(),
-        Action::NotifyViaTelegram
-    ));
+    // engine.add_executor(map_executor!(
+    //     TelegramMessageDispatcher::new_without_error_report(),
+    //     Action::NotifyViaTelegram
+    // ));
 
     heartbeat::start("sui-arb", Duration::from_secs(30));
 
